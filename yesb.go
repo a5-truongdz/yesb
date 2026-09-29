@@ -104,6 +104,7 @@ type BuildCmd struct {
     output string
     outputFlag string
     flags []string
+    alwaysRun bool
 }
 
 func NewBuildCmd() *BuildCmd {
@@ -128,6 +129,10 @@ func (c *BuildCmd) OutputFlag(flag string) {
 
 func (c *BuildCmd) UseFlags (flags ...string) {
     c.flags = append(c.flags, flags...)
+}
+
+func (c *BuildCmd) AlwaysRun(state bool) {
+    c.alwaysRun = state
 }
 
 func (c *BuildCmd) construct() *exec.Cmd {
@@ -158,6 +163,10 @@ func (c *BuildCmd) run() error {
 }
 
 func (c *BuildCmd) modified() (bool, error) {
+    if c.alwaysRun {
+        return true, nil
+    }
+
     // output not specified
     if c.output == "" {
         return true, nil
@@ -291,7 +300,7 @@ func (b *Builder) buildTarget(target *BuildTarget) error {
         }
 
         if !modified {
-            info("skipping command `%s`, up to date", cmdString)
+            info("skipping command `%s`, up to date\n", cmdString)
             continue
         }
 
