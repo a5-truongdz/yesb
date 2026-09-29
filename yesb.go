@@ -12,9 +12,9 @@ import (
 
 // Enums for DFS
 const (
-    DFS_unvisited = iota
-    DFS_visiting
-    DFS_done
+    dfsUnvisited = iota
+    dfsVisiting
+    dfsDone
 )
 
 // Modified helpers
@@ -36,12 +36,27 @@ func isModified(file string, ref string) (bool, error) {
 // Log helpers
 func fatal(format string, args ...any) {
     msg := fmt.Sprintf(format, args...)
-    fmt.Printf("\033[31;1m[ERROR]\033[0;1m: %s\n\033[0m", msg)
+    fmt.Printf("\033[31;1m[error]\033[0;1m: %s\n\033[0m", msg)
 }
 
 func info(format string, args ...any) {
     msg := fmt.Sprintf(format, args...)
-    fmt.Printf("\033[36;1m[INFO]\033[0;1m: %s\n\033[0m", msg)
+    fmt.Printf("\033[36;1m[info]\033[0;1m: %s\n\033[0m", msg)
+}
+
+func execute(format string, args ...any) {
+    msg := fmt.Sprintf(format, args...)
+    fmt.Printf("\033[32;1m[execute]\033[0;1m: %s\n\033[0m", msg)
+}
+
+func skip(format string, args ...any) {
+    msg := fmt.Sprintf(format, args...)
+    fmt.Printf("\033[33;1m[skip]\033[0;1m: %s\n\033[0m", msg)
+}
+
+func timetaken(format string, args ...any) {
+    msg := fmt.Sprintf(format, args...)
+    fmt.Printf("\033[35;1m[time]\033[0;1m: %s\n\033[0m", msg)
 }
 
 // Stolen from Tsoding's nob.h  aka. "Go Rebuild Urself"
@@ -254,6 +269,7 @@ func (t *BuildTarget) DependsOn(target ...*BuildTarget) {
 type Builder struct {
     targets []*BuildTarget
     state map[*BuildTarget]int
+    path []*BuildTarget
 }
 
 func NewBuilder() *Builder {
@@ -265,16 +281,34 @@ func (b *Builder) UseTargets(target ...*BuildTarget) {
 }
 
 func (b *Builder) buildTarget(target *BuildTarget) error {
-    // cycle
-    if b.state[target] == DFS_visiting {
-        return fmt.Errorf("dependency cycle detected at target `%s`", target.name)
-    }
+    switch b.state[target] {
+    case dfsVisiting:
+        start := 0
 
-    if b.state[target] == DFS_done {
+        for i, t := range b.path {
+            if t == target {
+                start = i
+                break
+            }
+        }
+
+        var cycle []string
+        for _, t := range b.path[start:] {
+            cycle = append(cycle, fmt.Sprintf("`%s`", t.name))
+        }
+        cycle = append(cycle, fmt.Sprintf("`%s`", target.name))
+
+        return fmt.Errorf(
+            "dependency cycle detected: %s",
+            strings.Join(cycle, " -> "),
+        )
+
+    case dfsDone:
         return nil
     }
 
-    b.state[target] = DFS_visiting
+    b.state[target] = dfsVisiting
+    b.path = append(b.path, target)
 
     // build deps first
     for _, dep := range target.dependsOn {
@@ -284,7 +318,8 @@ func (b *Builder) buildTarget(target *BuildTarget) error {
         }
     }
 
-    b.state[target] = DFS_done
+    b.state[target] = dfsDone
+    b.path = b.path[:len(b.path) - 1]
 
     // then build target
     info("reaching target `%s`", target.name)
@@ -300,11 +335,11 @@ func (b *Builder) buildTarget(target *BuildTarget) error {
         }
 
         if !modified {
-            info("skipping command `%s`, up to date\n", cmdString)
+            skip("`%s` (up to date)\n", cmdString)
             continue
         }
 
-        info("executing command: `%s`", cmdString)
+        execute("`%s`", cmdString)
 
         cmdStart := time.Now()
         if err := cmd.run(); err != nil {
@@ -313,7 +348,7 @@ func (b *Builder) buildTarget(target *BuildTarget) error {
         }
         cmdEnd := time.Since(cmdStart).Round(time.Microsecond)
 
-        info("command took %v\n", cmdEnd)
+        timetaken("command took %v\n", cmdEnd)
     }
 
     return nil
@@ -322,6 +357,7 @@ func (b *Builder) buildTarget(target *BuildTarget) error {
 // Build() should be called only ONCE
 func (b *Builder) Build() {
     b.state = make(map[*BuildTarget]int)
+    b.path = nil
 
     buildStart := time.Now()
     for _, target := range b.targets {
@@ -333,5 +369,5 @@ func (b *Builder) Build() {
     }
     buildEnd := time.Since(buildStart).Round(time.Millisecond)
 
-    info("build succeed, took %v", buildEnd)
+    timetaken("build succeed, took %v", buildEnd)
 }
