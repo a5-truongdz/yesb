@@ -3,22 +3,32 @@ package main
 func main() {
     GoRebuildUrself()
 
-    a := NewBuildTarget()
-    a.UseName("a")
+    compile := NewBuildCmd()
+    compile.UseExecutable("g++")
+    compile.WillUse("hello.cpp")
+    compile.WillOutput("hello")
+    compile.OutputFlag("-o")
+    compile.UseFlags(
+        "-std=c++20",
+        "-D_GLIBCXX_DEBUG",
+        "-Wall", "-Wextra",
+        "-Wpedantic",
+        "-g3", "-v",
+    )
 
-    b := NewBuildTarget()
-    b.UseName("b")
+    run := NewBuildCmdManually()
+    run.UseExecutable("./hello")
 
-    c := NewBuildTarget()
-    c.UseName("c")
+    hello := NewBuildTarget()
+    hello.UseName("hello")
+    hello.UseCommands(compile)
 
-    // a -> b -> c -> a
-    a.DependsOn(b)
-    b.DependsOn(c)
-    c.DependsOn(a)
+    all := NewBuildTarget()
+    all.UseName("all")
+    all.UseCommands(run)
+    all.DependsOn(hello)
 
     builder := NewBuilder()
-    builder.UseTargets(a)
-
+    builder.UseTargets(all)
     builder.Build()
 }

@@ -17,7 +17,7 @@ const (
     dfsDone
 )
 
-// Modified helpers
+// Modified helper
 // Compare if file is newer than ref, which assumes modified
 func isModified(file string, ref string) (bool, error) {
     fileInfo, err := os.Stat(file)
@@ -31,6 +31,17 @@ func isModified(file string, ref string) (bool, error) {
     }
 
     return fileInfo.ModTime().After(refInfo.ModTime()), nil
+}
+
+// Command helper
+func constructCmd(executable string, args ...string) *exec.Cmd {
+    cmd := exec.Command(executable, args...)
+
+    cmd.Stdout = os.Stdout
+    cmd.Stdin  = os.Stdin
+    cmd.Stderr = os.Stderr
+
+    return cmd
 }
 
 // Log helpers
@@ -81,14 +92,11 @@ func GoRebuildUrself() {
             info("%s is modified", file)
             info("rebuilding it...")
 
-            cmd := exec.Command(
+            cmd := constructCmd(
                 "go", "build",
                 "build.go",
                 "yesb.go",
             )
-
-            cmd.Stdout = os.Stdout
-            cmd.Stderr = os.Stderr
 
             if err := cmd.Run(); err != nil {
                 fatal("failed to rebuild: `%s`.", err)
@@ -166,11 +174,7 @@ func (c *BuildCmd) construct() *exec.Cmd {
         args = append(args, c.output)
     }
 
-    cmd := exec.Command(c.executable, args...)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-
-    return cmd
+    return constructCmd(c.executable, args...)
 }
 
 func (c *BuildCmd) run() error {
@@ -225,11 +229,7 @@ func (c *BuildCmdManually) UseArguments(args ...string) {
 }
 
 func (c *BuildCmdManually) construct() *exec.Cmd {
-    cmd := exec.Command(c.executable, c.args...)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-
-    return cmd
+    return constructCmd(c.executable, c.args...)
 }
 
 func (c *BuildCmdManually) run() error {
