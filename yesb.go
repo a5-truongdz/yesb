@@ -11,8 +11,9 @@ import (
 )
 
 // Enums for DFS
+type dfsState int
 const (
-    dfsUnvisited = iota
+    dfsUnvisited dfsState = iota
     dfsVisiting
     dfsDone
 )
@@ -45,29 +46,29 @@ func constructCmd(executable string, args ...string) *exec.Cmd {
 }
 
 // Log helpers
-func fatal(format string, args ...any) {
+func beautify(color int, tag, format string, args ...any) {
     msg := fmt.Sprintf(format, args...)
-    fmt.Printf("\033[31;1m[error]\033[0;1m: %s\n\033[0m", msg)
+    fmt.Printf("\033[%d;1m[%s]\033[0;1m: %s\n\033[0m", color, tag, msg)
 }
 
-func info(format string, args ...any) {
-    msg := fmt.Sprintf(format, args...)
-    fmt.Printf("\033[36;1m[info]\033[0;1m: %s\n\033[0m", msg)
+func logFatal(format string, args ...any) {
+    beautify(31, "error", format, args...)
 }
 
-func execute(format string, args ...any) {
-    msg := fmt.Sprintf(format, args...)
-    fmt.Printf("\033[32;1m[execute]\033[0;1m: %s\n\033[0m", msg)
+func logInfo(format string, args ...any) {
+    beautify(36, "info", format, args...)
 }
 
-func skip(format string, args ...any) {
-    msg := fmt.Sprintf(format, args...)
-    fmt.Printf("\033[33;1m[skip]\033[0;1m: %s\n\033[0m", msg)
+func logExecute(format string, args ...any) {
+    beautify(32, "execute", format, args...)
 }
 
-func timetaken(format string, args ...any) {
-    msg := fmt.Sprintf(format, args...)
-    fmt.Printf("\033[35;1m[time]\033[0;1m: %s\n\033[0m", msg)
+func logSkip(format string, args ...any) {
+    beautify(33, "skip", format, args...)
+}
+
+func logTime(format string, args ...any) {
+    beautify(35, "time", format, args...)
 }
 
 // Stolen from Tsoding's nob.h  aka. "Go Rebuild Urself"
@@ -75,22 +76,22 @@ func timetaken(format string, args ...any) {
 func GoRebuildUrself() {
     exe, err := os.Executable()
     if err != nil || strings.HasPrefix(exe, "/tmp") {    // ignoring /tmp/* cuz why not
-        fatal("executable not found")
-        fatal("maybe you should `go build` instead of `go run`.")
+        logFatal("executable not found")
+        logFatal("maybe you should `go build` instead of `go run`.")
         os.Exit(69)
     }
 
     for _, file := range []string{"build.go", "yesb.go"} {
         modified, err := isModified(file, exe)
         if err != nil {
-            fatal("failed to stat `%s`: `%s`", file, err)
-            fatal("make sure you name your file correctly.")
+            logFatal("failed to stat `%s`: `%s`", file, err)
+            logFatal("make sure you name your file correctly.")
             os.Exit(69)
         }
 
         if modified {
-            info("%s is modified", file)
-            info("rebuilding it...")
+            logInfo("%s is modified", file)
+            logInfo("rebuilding it...")
 
             cmd := constructCmd(
                 "go", "build",
@@ -99,14 +100,14 @@ func GoRebuildUrself() {
             )
 
             if err := cmd.Run(); err != nil {
-                fatal("failed to rebuild: `%s`.", err)
-                fatal("make sure yesb.go exists.")
+                logFatal("failed to rebuild: `%s`.", err)
+                logFatal("make sure yesb.go exists.")
                 os.Exit(69)
             }
 
             fmt.Println()    // stray newline for readability
             if err := syscall.Exec(exe, os.Args, os.Environ()); err != nil {
-                fatal("failed to restart: `%s`.", err)
+                logFatal("failed to restart: `%s`.", err)
                 os.Exit(69)
             }
         }
@@ -115,19 +116,19 @@ func GoRebuildUrself() {
 
 
 type cmd interface {
-    construct() *exec.Cmd
-    run() error
-    modified() (bool, error)
+    _construct() *exec.Cmd
+    _run() error
+    _modified() (bool, error)
 }
 
 // {executable} {flags} {use} {outputFlag} {output}
 type BuildCmd struct {
-    executable string
-    uses []string
-    output string
-    outputFlag string
-    flags []string
-    alwaysRun bool
+    _executable string
+    _uses []string
+    _output string
+    _outputFlag string
+    _flags []string
+    _alwaysRun bool
 }
 
 func NewBuildCmd() *BuildCmd {
@@ -135,69 +136,69 @@ func NewBuildCmd() *BuildCmd {
 }
 
 func (c *BuildCmd) UseExecutable(binary string) {
-    c.executable = binary
+    c._executable = binary
 }
 
 func (c *BuildCmd) WillUse(files ...string) {
-    c.uses = append(c.uses, files...)
+    c._uses = append(c._uses, files...)
 }
 
 func (c *BuildCmd) WillOutput(file string) {
-    c.output = file
+    c._output = file
 }
 
 func (c *BuildCmd) OutputFlag(flag string) {
-    c.outputFlag = flag
+    c._outputFlag = flag
 }
 
 func (c *BuildCmd) UseFlags (flags ...string) {
-    c.flags = append(c.flags, flags...)
+    c._flags = append(c._flags, flags...)
 }
 
 func (c *BuildCmd) AlwaysRun(state bool) {
-    c.alwaysRun = state
+    c._alwaysRun = state
 }
 
-func (c *BuildCmd) construct() *exec.Cmd {
+func (c *BuildCmd) _construct() *exec.Cmd {
     var args []string
 
-    args = append(args, c.flags...)
-    args = append(args, c.uses...)
+    args = append(args, c._flags...)
+    args = append(args, c._uses...)
 
     // outputFlags can be empty
-    if c.outputFlag != "" {
-        args = append(args, c.outputFlag)
+    if c._outputFlag != "" {
+        args = append(args, c._outputFlag)
     }
 
     // again, output can be empty
-    if c.output != "" {
-        args = append(args, c.output)
+    if c._output != "" {
+        args = append(args, c._output)
     }
 
-    return constructCmd(c.executable, args...)
+    return constructCmd(c._executable, args...)
 }
 
-func (c *BuildCmd) run() error {
-    return c.construct().Run()
+func (c *BuildCmd) _run() error {
+    return c._construct().Run()
 }
 
-func (c *BuildCmd) modified() (bool, error) {
-    if c.alwaysRun {
+func (c *BuildCmd) _modified() (bool, error) {
+    if c._alwaysRun {
         return true, nil
     }
 
     // output not specified
-    if c.output == "" {
+    if c._output == "" {
         return true, nil
     }
 
     // output isnt generated yet
-    if _, err := os.Stat(c.output); errors.Is(err, os.ErrNotExist) {
+    if _, err := os.Stat(c._output); errors.Is(err, os.ErrNotExist) {
         return true, nil
     }
 
-    for _, file := range c.uses {
-        modified, err := isModified(file, c.output)
+    for _, file := range c._uses {
+        modified, err := isModified(file, c._output)
         if err != nil {
             return false, err
         }
@@ -212,8 +213,8 @@ func (c *BuildCmd) modified() (bool, error) {
 
 // Manually specify the full command
 type BuildCmdManually struct {
-    executable string
-    args []string
+    _executable string
+    _args []string
 }
 
 func NewBuildCmdManually() *BuildCmdManually {
@@ -221,22 +222,22 @@ func NewBuildCmdManually() *BuildCmdManually {
 }
 
 func (c *BuildCmdManually) UseExecutable(binary string) {
-    c.executable = binary
+    c._executable = binary
 }
 
 func (c *BuildCmdManually) UseArguments(args ...string) {
-    c.args = append(c.args, args...)
+    c._args = append(c._args, args...)
 }
 
-func (c *BuildCmdManually) construct() *exec.Cmd {
-    return constructCmd(c.executable, c.args...)
+func (c *BuildCmdManually) _construct() *exec.Cmd {
+    return constructCmd(c._executable, c._args...)
 }
 
-func (c *BuildCmdManually) run() error {
-    return c.construct().Run()
+func (c *BuildCmdManually) _run() error {
+    return c._construct().Run()
 }
 
-func (c *BuildCmdManually) modified() (bool, error) {
+func (c *BuildCmdManually) _modified() (bool, error) {
     // well we dont know the input/output of custom commands
     // so always run it
     return true, nil
@@ -244,32 +245,34 @@ func (c *BuildCmdManually) modified() (bool, error) {
 
 
 type BuildTarget struct {
-    cmds []cmd
-    dependsOn []*BuildTarget
-    name string
+    _cmds []cmd
+    _dependsOn []*BuildTarget
+    _name string
 }
 
 func NewBuildTarget() *BuildTarget {
     return &BuildTarget{}
 }
 
+// since we dont know what the variable name are
+// we have to do manually provide the _name
 func (t *BuildTarget) UseName(name string) {
-    t.name = name
+    t._name = name
 }
 
-func (t *BuildTarget) UseCommands(command ...cmd) {
-    t.cmds = append(t.cmds, command...)
+func (t *BuildTarget) UseCommands(commands ...cmd) {
+    t._cmds = append(t._cmds, commands...)
 }
 
 func (t *BuildTarget) DependsOn(target ...*BuildTarget) {
-    t.dependsOn = append(t.dependsOn, target...)
+    t._dependsOn = append(t._dependsOn, target...)
 }
 
 
 type Builder struct {
-    targets []*BuildTarget
-    state map[*BuildTarget]int
-    path []*BuildTarget
+    _targets []*BuildTarget
+    _state map[*BuildTarget]dfsState
+    _path []*BuildTarget
 }
 
 func NewBuilder() *Builder {
@@ -277,15 +280,15 @@ func NewBuilder() *Builder {
 }
 
 func (b *Builder) UseTargets(target ...*BuildTarget) {
-    b.targets = append(b.targets, target...)
+    b._targets = append(b._targets, target...)
 }
 
 func (b *Builder) buildTarget(target *BuildTarget) error {
-    switch b.state[target] {
+    switch b._state[target] {
     case dfsVisiting:
         start := 0
 
-        for i, t := range b.path {
+        for i, t := range b._path {
             if t == target {
                 start = i
                 break
@@ -293,10 +296,10 @@ func (b *Builder) buildTarget(target *BuildTarget) error {
         }
 
         var cycle []string
-        for _, t := range b.path[start:] {
-            cycle = append(cycle, fmt.Sprintf("`%s`", t.name))
+        for _, t := range b._path[start:] {
+            cycle = append(cycle, fmt.Sprintf("`%s`", t._name))
         }
-        cycle = append(cycle, fmt.Sprintf("`%s`", target.name))
+        cycle = append(cycle, fmt.Sprintf("`%s`", target._name))
 
         return fmt.Errorf(
             "dependency cycle detected: %s",
@@ -307,48 +310,48 @@ func (b *Builder) buildTarget(target *BuildTarget) error {
         return nil
     }
 
-    b.state[target] = dfsVisiting
-    b.path = append(b.path, target)
+    b._state[target] = dfsVisiting
+    b._path = append(b._path, target)
 
     // build deps first
-    for _, dep := range target.dependsOn {
+    for _, dep := range target._dependsOn {
         err := b.buildTarget(dep)
         if err != nil {
             return err
         }
     }
 
-    b.state[target] = dfsDone
-    b.path = b.path[:len(b.path) - 1]
+    b._state[target] = dfsDone
+    b._path = b._path[:len(b._path) - 1]
 
     // then build target
-    info("reaching target `%s`", target.name)
+    logInfo("reaching target `%s`", target._name)
 
-    for _, cmd := range target.cmds {
-        cmdString := strings.Join(cmd.construct().Args, " ")
+    for _, cmd := range target._cmds {
+        cmdString := strings.Join(cmd._construct().Args, " ")
 
         // skip when unmodified
-        modified, err := cmd.modified()
+        modified, err := cmd._modified()
         if err != nil {
-            fatal("failed to check command `%s`: `%s`", cmdString, err)
+            logFatal("failed to check command `%s`: `%s`", cmdString, err)
             os.Exit(69)
         }
 
         if !modified {
-            skip("`%s` (up to date)\n", cmdString)
+            logSkip("`%s` (up to date)\n", cmdString)
             continue
         }
 
-        execute("`%s`", cmdString)
+        logExecute("`%s`", cmdString)
 
         cmdStart := time.Now()
-        if err := cmd.run(); err != nil {
-            fatal("failed to build target `%s`: `%s`", target.name, err)
+        if err := cmd._run(); err != nil {
+            logFatal("failed to build target `%s`: `%s`", target._name, err)
             os.Exit(69)
         }
         cmdEnd := time.Since(cmdStart).Round(time.Microsecond)
 
-        timetaken("command took %v\n", cmdEnd)
+        logTime("command took %v\n", cmdEnd)
     }
 
     return nil
@@ -356,18 +359,18 @@ func (b *Builder) buildTarget(target *BuildTarget) error {
 
 // Build() should be called only ONCE
 func (b *Builder) Build() {
-    b.state = make(map[*BuildTarget]int)
-    b.path = nil
+    b._state = make(map[*BuildTarget]dfsState)
+    b._path = nil
 
     buildStart := time.Now()
-    for _, target := range b.targets {
+    for _, target := range b._targets {
         err := b.buildTarget(target)
         if err != nil {
-            fatal(err.Error())
+            logFatal("%s", err)
             os.Exit(69)
         }
     }
     buildEnd := time.Since(buildStart).Round(time.Millisecond)
 
-    timetaken("build succeed, took %v", buildEnd)
+    logTime("build succeed, took %v", buildEnd)
 }

@@ -1,5 +1,10 @@
 package main
 
+import (
+    "os"
+    "log"
+)
+
 func main() {
     GoRebuildUrself()
 
@@ -19,16 +24,31 @@ func main() {
     run := NewBuildCmdManually()
     run.UseExecutable("./hello")
 
-    hello := NewBuildTarget()
-    hello.UseName("hello")
-    hello.UseCommands(compile)
-
     all := NewBuildTarget()
     all.UseName("all")
-    all.UseCommands(run)
-    all.DependsOn(hello)
+    all.UseCommands(compile, run)
+
+    del := NewBuildCmdManually()
+    del.UseExecutable("rm")
+    del.UseArguments("hello")
+
+    clean := NewBuildTarget()
+    clean.UseName("clean")
+    clean.UseCommands(del)
 
     builder := NewBuilder()
-    builder.UseTargets(all)
+
+    if len(os.Args) == 1 {    // only `./build`
+        builder.UseTargets(all)
+    } else {
+        if os.Args[1] == "clean" {
+            builder.UseTargets(clean)
+        } else if os.Args[1] == "all" {
+            builder.UseTargets(all)
+        } else {
+            log.Fatalf("unknown target %s", os.Args[1])
+        }
+    }
+
     builder.Build()
 }
