@@ -72,21 +72,7 @@ In that case, you may want an established build system instead.
 
 ## How to Use
 
-The basic idea is that your build script is simply a Go program.
-
-- Run `go get github.com/a5-truongdz/yesb`
-
-- Create a `build.go` and define your build targets and their dependencies,
-
-- Bootstrap it with `go build -tags build build.go`
-
-After that you can just call `./build` to make it auto-rebuild.
-
-For the current syntax and examples, see [`SYNTAX.md`].
-
-There is intentionally no separate configuration syntax to learn.
-
-If you know Go, you already know the language used to describe your build.
+See [SYNTAX.md](SYNTAX.md)
 
 ## Dependency Graph
 
