@@ -82,7 +82,7 @@ The basic idea is that your build script is simply a Go program.
 
 After that you can just call `./build` to make it auto-rebuild.
 
-For the current syntax and examples, please wait. It's finalizing.
+For the current syntax and examples, see [`SYNTAX.md`].
 
 There is intentionally no separate configuration syntax to learn.
 
@@ -143,7 +143,7 @@ Most importantly, the build system itself is just a normal Go program.
 
 `yesb` is heavily inspired by the NoBuild approach and especially by Tsoding's [`nob.h`](https://github.com/tsoding/nob.h).
 
-This README this heavily inspired too.
+This README is heavily inspired too.
 
 The goal is not to directly reproduce `nob.h`, but to explore the same general idea in Go.
 

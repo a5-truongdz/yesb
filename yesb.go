@@ -96,6 +96,7 @@ func GoRebuildUrself() {
         cmd := constructCmd(
             "go", "build",
             "-tags", "build",
+            "-o", exe,
             "build.go",
         )
 
