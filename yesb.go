@@ -81,35 +81,34 @@ func GoRebuildUrself() {
         os.Exit(69)
     }
 
-    for _, file := range []string{"build.go", "yesb.go"} {
-        modified, err := isModified(file, exe)
-        if err != nil {
-            logFatal("failed to stat `%s`: `%s`", file, err)
-            logFatal("make sure you name your file correctly.")
+    file := "build.go"
+    modified, err := isModified(file, exe)
+    if err != nil {
+        logFatal("failed to stat `%s`: `%s`", file, err)
+        logFatal("make sure you name your file correctly.")
+        os.Exit(69)
+    }
+
+    if modified {
+        logInfo("%s is modified", file)
+        logInfo("rebuilding it...")
+
+        cmd := constructCmd(
+            "go", "build",
+            "-tags", "build",
+            "build.go",
+        )
+
+        if err := cmd.Run(); err != nil {
+            logFatal("failed to rebuild: `%s`.", err)
+            logFatal("make sure yesb.go exists.")
             os.Exit(69)
         }
 
-        if modified {
-            logInfo("%s is modified", file)
-            logInfo("rebuilding it...")
-
-            cmd := constructCmd(
-                "go", "build",
-                "-tags", "build",
-                "build.go",
-            )
-
-            if err := cmd.Run(); err != nil {
-                logFatal("failed to rebuild: `%s`.", err)
-                logFatal("make sure yesb.go exists.")
-                os.Exit(69)
-            }
-
-            fmt.Println()    // stray newline for readability
-            if err := syscall.Exec(exe, os.Args, os.Environ()); err != nil {
-                logFatal("failed to restart: `%s`.", err)
-                os.Exit(69)
-            }
+        fmt.Println()    // stray newline for readability
+        if err := syscall.Exec(exe, os.Args, os.Environ()); err != nil {
+            logFatal("failed to restart: `%s`.", err)
+            os.Exit(69)
         }
     }
 }
