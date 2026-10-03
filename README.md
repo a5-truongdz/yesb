@@ -74,15 +74,15 @@ In that case, you may want an established build system instead.
 
 The basic idea is that your build script is simply a Go program.
 
-- Drag `yesb.go` to your project,
+- Run `go get github.com/a5-truongdz/yesb`
 
 - Create a `build.go` and define your build targets and their dependencies,
 
-- Bootstrap it with `go build build.go yesb.go`
+- Bootstrap it with `go build -tags build build.go`
 
 After that you can just call `./build` to make it auto-rebuild.
 
-For the current syntax and examples, see [`build.go`](build.go).
+For the current syntax and examples, please wait. It's finalizing.
 
 There is intentionally no separate configuration syntax to learn.
 
@@ -119,12 +119,6 @@ A dependency cycle results in a build error instead of recursively traversing fo
 ## Incremental Builds
 
 `yesb` can determine whether a command needs to run again by comparing the modification time of its inputs and output.
-
-For example:
-
-```text
-source.cpp ──→ program
-```
 
 If `program` already exists and is newer than `source.cpp`, the command can be skipped.
 

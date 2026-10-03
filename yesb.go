@@ -1,4 +1,4 @@
-package main
+package yesb
 
 import (
     "os"
@@ -95,8 +95,8 @@ func GoRebuildUrself() {
 
             cmd := constructCmd(
                 "go", "build",
+                "-tags", "build",
                 "build.go",
-                "yesb.go",
             )
 
             if err := cmd.Run(); err != nil {
