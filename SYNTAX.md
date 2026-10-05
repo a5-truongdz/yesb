@@ -12,20 +12,26 @@ import "github.com/a5-truongdz/yesb"
 
 func main() {
     yesb.GoRebuildUrself()
-
-    builder := yesb.NewBuilder()
-
-    // ...
-
-    builder.Build()
+    yesb.NewBuilder().
+        UseTargets(
+            yesb.NewBuildTarget().
+                UseName("hello").
+                UseCommands(
+                    yesb.NewBuildCmdManually().
+                        UseExecutable("echo").
+                        UseArguments("Hello", "World!"),
+                ),
+        ).
+        Build()
 }
+
 ```
 
 > **NOTE**: Your build script **MUST** be named `build.go`.
 >
 > **NOTE**: `build.go` **MUST** be declared `package main`.
 >
-> **NOTE**: The `//go:build build` tag is **REQUIRED**. It's used to avoid conflicting with another Go project, since `build.go` is declared `package main`.
+> **NOTE**: The `//go:build build` tag is **REQUIRED**. It's used to avoid conflicting ith another Go project, since `build.go` is declared `package main`.
 >
 > **NOTE**: Your project **MUSTN'T** use the same tag.
 >
