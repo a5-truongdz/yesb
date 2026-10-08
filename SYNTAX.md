@@ -5,7 +5,8 @@
 A `yesb` build script is a normal Go program.
 
 ```go
-//go:build build
+//go:build yesb_build
+
 package main
 
 import "github.com/a5-truongdz/yesb"
@@ -31,7 +32,7 @@ func main() {
 >
 > **NOTE**: `build.go` **MUST** be declared `package main`.
 >
-> **NOTE**: The `//go:build build` tag is **REQUIRED**. It's used to avoid conflicting ith another Go project, since `build.go` is declared `package main`.
+> **NOTE**: The `//go:build yesb_build` tag is **REQUIRED**. It's used to avoid conflicting ith another Go project, since `build.go` is declared `package main`.
 >
 > **NOTE**: Your project **MUSTN'T** use the same tag.
 >
@@ -42,7 +43,7 @@ To use `yesb`:
 - Create a `build.go` and define build targets and dependencies. (See syntax below)
 > Don't forget to use `yesb.GoRebuildUrself()` to make it auto-rebuild!
 >
-> Don't forget to add the build tag `//go:build build`, please!
+> Don't forget to add the build tag `//go:build yesb_build`, please!
 - Bootstrap it with `go build -tags build -o build build.go`.
 
 After that you can just call `./build` to make it auto-rebuild.

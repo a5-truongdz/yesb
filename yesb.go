@@ -99,7 +99,7 @@ func GoRebuildUrself() {
 
         cmd := constructCmd(
             "go", "build",
-            "-tags", "build",
+            "-tags", "yesb_build",
             "-o", exe,
             "build.go",
         )
@@ -406,7 +406,7 @@ func (b *Builder) buildTarget(target *BuildTarget) error {
         }
 
         if !modified {
-            logSkip("`%s` (up to date)\n", cmdString)
+            logSkip("`%s` (up to date)", cmdString)
             continue
         }
 
