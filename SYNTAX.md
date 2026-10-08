@@ -149,9 +149,7 @@ Sometimes a command doesn't fit the `BuildCmd` abstraction.
 
 For example: `go vet .`.
 
-There is no meaningful input/output relationship to track here.
-
-That's what `BuildCmdManually` is for, it's always executed every time.
+That's what `BuildCmdManually` is for.
 
 Example:
 ```go
@@ -172,6 +170,29 @@ Specifies the command arguments.
 
 ```go
 cmd.UseArguments("vet", ".")
+```
+
+#### c, `.Track(state)`
+When tracking is enabled, the command only runs if one of its tracked files is newer than the reference file.
+
+It can be enabled or disabled.
+
+```go
+cmd.Track(true)
+```
+
+#### d, `.TrackFiles(files...)`
+Specifies files to track.
+
+```go
+cmd.TrackFiles("hello.c", "foo.c")
+```
+
+#### e, `.TrackReference(file)`
+Specifies the reference to compare with track files.
+
+```go
+cmd.TrackReference("hello")
 ```
 
 ## IV. Build Targets

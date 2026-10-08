@@ -64,11 +64,15 @@ func logExecute(format string, args ...any) {
 }
 
 func logSkip(format string, args ...any) {
-    beautify(33, "skip", format, args...)
+    beautify(34, "skip", format, args...)
 }
 
 func logTime(format string, args ...any) {
     beautify(35, "time", format, args...)
+}
+
+func logWarn(format string, args ...any) {
+    beautify(33, "warn", format, args...)
 }
 
 // stolen from Tsoding's nob.h  aka. "Go Rebuild Urself"
@@ -124,11 +128,11 @@ type cmd interface {
 // {executable} {flags} {use} {outputFlag} {output}
 type BuildCmd struct {
     executable string
-    uses []string
-    output string
+    uses       []string
+    output     string
     outputFlag string
-    flags []string
-    alwaysRun bool
+    flags      []string
+    alwaysRun  bool
 }
 
 func NewBuildCmd() *BuildCmd {
@@ -195,6 +199,8 @@ func (c *BuildCmd) modified() (bool, error) {
 
     // output not specified
     if c.output == "" {
+        logWarn("output not specified")
+        logWarn("running anyways...")
         return true, nil
     }
 
@@ -220,7 +226,10 @@ func (c *BuildCmd) modified() (bool, error) {
 // manually specify the full command
 type BuildCmdManually struct {
     executable string
-    args []string
+    args       []string
+    track      bool
+    files      []string
+    reference  string
 }
 
 func NewBuildCmdManually() *BuildCmdManually {
@@ -237,6 +246,21 @@ func (c *BuildCmdManually) UseArguments(args ...string) *BuildCmdManually {
     return c
 }
 
+func (c *BuildCmdManually) Track(flag bool) *BuildCmdManually {
+    c.track = flag
+    return c
+}
+
+func (c *BuildCmdManually) TrackFiles(files ...string) *BuildCmdManually {
+    c.files = append(c.files, files...)
+    return c
+}
+
+func (c *BuildCmdManually) TrackReference(file string) *BuildCmdManually {
+    c.reference = file
+    return c
+}
+
 func (c *BuildCmdManually) construct() *exec.Cmd {
     return constructCmd(c.executable, c.args...)
 }
@@ -246,16 +270,48 @@ func (c *BuildCmdManually) run() error {
 }
 
 func (c *BuildCmdManually) modified() (bool, error) {
-    // well we dont know the input/output of custom commands
-    // so always run it
-    return true, nil
+    if !c.track {
+        if len(c.files) != 0 {
+            logWarn("tracking not set but files are specified")
+        } else if c.reference != "" {
+            logWarn("tracking not set but reference is specified")
+        }
+
+        return true, nil
+    }
+
+    // track set but files|reference is empty
+    if len(c.files) == 0 {
+        logWarn("no files specified for tracking")
+        logWarn("running anyways...")
+        return true, nil
+    }
+
+    if c.reference == "" {
+        logWarn("no reference specified for tracking")
+        logWarn("running anyways...")
+        return true, nil
+    }
+
+    for _, file := range c.files {
+        modified, err := isModified(file, c.reference)
+        if err != nil {
+            return false, err
+        }
+
+        if modified {
+            return true, nil
+        }
+    }
+
+    return false, nil
 }
 
 
 type BuildTarget struct {
-    cmds []cmd
+    cmds      []cmd
     dependsOn []*BuildTarget
-    name string
+    name      string
 }
 
 func NewBuildTarget() *BuildTarget {
@@ -282,8 +338,8 @@ func (t *BuildTarget) DependsOn(target ...*BuildTarget) *BuildTarget {
 
 type Builder struct {
     targets []*BuildTarget
-    state map[*BuildTarget]dfsState
-    path []*BuildTarget
+    state   map[*BuildTarget]dfsState
+    path    []*BuildTarget
 }
 
 func NewBuilder() *Builder {
